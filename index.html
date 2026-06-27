@@ -1,0 +1,864 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>MTR ETA</title>
+
+  <meta name="theme-color" content="#ffffff">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="MTR ETA">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="description" content="低數據港鐵 ETA PWA">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+  <link rel="icon" href="./icons/mtr-exact-icon-192.png">
+
+  <style>
+    :root {
+      --bg: #f7f8fb;
+      --card: #ffffff;
+      --text: #111827;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --dark: #111827;
+      --danger: #dc2626;
+      --warn: #f97316;
+      --green: #15803d;
+      --blue: #1d4ed8;
+      --purple: #6d28d9;
+      --shadow: 0 8px 22px rgba(17,24,39,.07);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "PingFang HK", "PingFang TC", "Noto Sans TC", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    body {
+      padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+    }
+
+    .app {
+      width: min(100%, 520px);
+      margin: 0 auto;
+      padding: 14px 16px 18px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 4px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .brand-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-title img {
+      width: 48px;
+      height: 42px;
+      object-fit: contain;
+      flex: 0 0 auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(34px, 10vw, 44px);
+      line-height: 1;
+      letter-spacing: -1.3px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .low-data {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #0b8f57;
+      font-weight: 850;
+      font-size: 15px;
+      margin-left: 2px;
+    }
+
+    .lang-btn {
+      appearance: none;
+      border: 1px solid #d1d5db;
+      background: #fff;
+      color: var(--text);
+      border-radius: 999px;
+      padding: 12px 15px;
+      font-weight: 900;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      box-shadow: 0 3px 10px rgba(0,0,0,.04);
+    }
+
+    .selector-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .field label {
+      display: block;
+      font-size: 15px;
+      font-weight: 900;
+      margin-bottom: 8px;
+    }
+
+    .select-wrap {
+      position: relative;
+      background: linear-gradient(135deg, #111827, #1f2937);
+      color: white;
+      border-radius: 18px;
+      height: 56px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    .select-wrap::after {
+      content: "⌄";
+      position: absolute;
+      right: 13px;
+      top: 50%;
+      transform: translateY(-55%);
+      font-size: 24px;
+      font-weight: 900;
+      opacity: .9;
+      pointer-events: none;
+    }
+
+    select {
+      width: 100%;
+      height: 56px;
+      border: 0;
+      outline: 0;
+      appearance: none;
+      background: transparent;
+      color: white;
+      font-size: 18px;
+      font-weight: 900;
+      padding: 0 34px 0 13px;
+      font-family: inherit;
+    }
+
+    select option {
+      color: #111827;
+      background: white;
+    }
+
+    .destination {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+      margin-top: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 18px;
+      overflow: hidden;
+      background: white;
+      box-shadow: var(--shadow);
+    }
+
+    .dest-btn {
+      appearance: none;
+      border: 0;
+      height: 54px;
+      background: #fff;
+      color: var(--text);
+      font-family: inherit;
+      font-size: 19px;
+      font-weight: 950;
+      padding: 0 10px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .dest-btn.active {
+      background: var(--dark);
+      color: white;
+    }
+
+    .dest-btn + .dest-btn {
+      border-left: 1px solid #e5e7eb;
+    }
+
+    .usage {
+      margin-top: 12px;
+      height: 42px;
+      border: 1px solid #e5e7eb;
+      background: #fff;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 0 10px;
+      box-shadow: 0 5px 14px rgba(17,24,39,.04);
+      font-size: 14px;
+      font-weight: 900;
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .usage span {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .usage .sep {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #d1d5db;
+      flex: 0 0 auto;
+    }
+
+    .eta-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 13px;
+    }
+
+    .eta-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 21px;
+      padding: 15px 14px;
+      display: grid;
+      grid-template-columns: 92px 1px minmax(0,1fr) 64px;
+      gap: 14px;
+      align-items: center;
+      min-height: 124px;
+      box-shadow: var(--shadow);
+    }
+
+    .minbox {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .minute {
+      font-size: clamp(52px, 14vw, 66px);
+      font-weight: 1000;
+      letter-spacing: -3px;
+      line-height: .9;
+      color: var(--text);
+    }
+
+    .minute.danger { color: var(--danger); }
+    .minute.warn { color: var(--warn); }
+
+    .unit {
+      font-size: 20px;
+      font-weight: 950;
+      color: #374151;
+    }
+
+    .vline {
+      width: 1px;
+      height: 78px;
+      background: #e5e7eb;
+    }
+
+    .maininfo {
+      min-width: 0;
+    }
+
+    .to {
+      font-size: clamp(23px, 6vw, 30px);
+      font-weight: 1000;
+      line-height: 1.05;
+      letter-spacing: -.6px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .seq {
+      margin-top: 6px;
+      color: #4b5563;
+      font-size: 15px;
+      font-weight: 700;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .badge {
+      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 14px;
+      font-weight: 950;
+      white-space: nowrap;
+    }
+
+    .badge.door { background: #fee2e2; color: #dc2626; }
+    .badge.arrive { background: #ffedd5; color: #f97316; }
+    .badge.normal { background: #f3f4f6; color: #374151; }
+
+    .platform {
+      background: #f3f4f6;
+      border-radius: 18px;
+      height: 76px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 0 0 auto;
+    }
+
+    .platform .label {
+      font-size: 15px;
+      font-weight: 950;
+      color: #374151;
+    }
+
+    .platform .num {
+      font-size: 34px;
+      font-weight: 1000;
+      line-height: .95;
+      color: #111827;
+    }
+
+    .footer {
+      margin-top: 12px;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 0 8px 0 14px;
+      color: #374151;
+      font-size: 14px;
+      font-weight: 850;
+      box-shadow: 0 5px 14px rgba(17,24,39,.04);
+      white-space: nowrap;
+      overflow: hidden;
+    }
+
+    .footer-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .refresh {
+      margin-left: auto;
+      appearance: none;
+      border: 0;
+      border-radius: 14px;
+      width: 42px;
+      height: 42px;
+      background: #f3f4f6;
+      color: var(--text);
+      font-size: 21px;
+      font-weight: 950;
+      flex: 0 0 auto;
+    }
+
+    .notice {
+      margin-top: 14px;
+      padding: 13px 14px;
+      border-radius: 18px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      color: #9a3412;
+      font-size: 14px;
+      font-weight: 750;
+      line-height: 1.45;
+      display: none;
+    }
+
+    .notice.show { display: block; }
+
+    .empty {
+      margin-top: 13px;
+      padding: 22px 16px;
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 20px;
+      font-weight: 850;
+      color: #6b7280;
+      text-align: center;
+    }
+
+    .small-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    .mini-btn {
+      border: 1px solid #d1d5db;
+      background: #fff;
+      border-radius: 14px;
+      height: 42px;
+      font-family: inherit;
+      font-weight: 900;
+      color: #111827;
+    }
+
+    @media (max-width: 360px) {
+      .app { padding-left: 12px; padding-right: 12px; }
+      .selector-grid { gap: 9px; }
+      .eta-card {
+        grid-template-columns: 76px 1px minmax(0,1fr) 56px;
+        gap: 10px;
+        padding: 13px 10px;
+      }
+      .minute { font-size: 52px; }
+      .to { font-size: 23px; }
+      .platform { width: 56px; }
+      .brand-title img { width: 42px; height: 37px; }
+      h1 { font-size: 34px; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="app">
+    <section class="header">
+      <div class="brand">
+        <div class="brand-title">
+          <img src="./icons/hk-mtr-logo-exact.png" alt="MTR">
+          <h1>MTR ETA</h1>
+        </div>
+        <div class="low-data"><span data-i18n="lowData">低數據模式</span></div>
+      </div>
+
+      <button id="langBtn" class="lang-btn" type="button">EN</button>
+    </section>
+
+    <section class="selector-grid">
+      <div class="field">
+        <label data-i18n="line">路綫</label>
+        <div class="select-wrap"><select id="lineSelect"></select></div>
+      </div>
+      <div class="field">
+        <label data-i18n="station">車站</label>
+        <div class="select-wrap"><select id="stationSelect"></select></div>
+      </div>
+    </section>
+
+    <section id="destinationButtons" class="destination">
+      <button class="dest-btn active" type="button">往 --</button>
+      <button class="dest-btn" type="button">往 --</button>
+    </section>
+
+    <section class="usage">
+      <span style="color:#15803d"><span data-i18n="now">本次</span> <b id="sessionRequests">0</b></span>
+      <i class="sep"></i>
+      <span style="color:#1d4ed8"><span data-i18n="used">已用</span> <b id="totalRequests">0</b></span>
+      <i class="sep"></i>
+      <span style="color:#6d28d9"><span data-i18n="data">數據</span> <b id="totalData">0 KB</b></span>
+    </section>
+
+    <section id="notice" class="notice"></section>
+
+    <section id="etaList" class="eta-list"></section>
+
+    <section class="footer">
+      
+      <span class="footer-text">
+        <span data-i18n="updateEvery">資料每 15 秒更新一次</span>
+        <span>｜</span>
+        <span data-i18n="lastUpdate">最後更新</span>：<span id="lastUpdate">--:--:--</span>
+      </span>
+      <button id="refreshBtn" class="refresh" type="button">Refresh</button>
+    </section>
+
+    <section class="small-actions">
+      <button id="installHelp" class="mini-btn" type="button">加入主畫面教學</button>
+      <button id="resetUsage" class="mini-btn" type="button">重設數據記錄</button>
+    </section>
+  </main>
+
+<script>
+const STATION_DATA = [
+  { id:"AEL", zh:"機場快綫", en:"Airport Express", color:"#00888A", stations:[
+    ["HOK","香港","Hong Kong"],["KOW","九龍","Kowloon"],["TSY","青衣","Tsing Yi"],["AIR","機場","Airport"],["AWE","博覽館","AsiaWorld-Expo"]
+  ], fallback:["HOK","AWE"]},
+  { id:"TCL", zh:"東涌綫", en:"Tung Chung Line", color:"#F7943E", stations:[
+    ["HOK","香港","Hong Kong"],["KOW","九龍","Kowloon"],["OLY","奧運","Olympic"],["NAC","南昌","Nam Cheong"],["LAK","荔景","Lai King"],["TSY","青衣","Tsing Yi"],["SUN","欣澳","Sunny Bay"],["TUC","東涌","Tung Chung"]
+  ], fallback:["HOK","TUC"]},
+  { id:"TML", zh:"屯馬綫", en:"Tuen Ma Line", color:"#9A3B26", stations:[
+    ["WKS","烏溪沙","Wu Kai Sha"],["MOS","馬鞍山","Ma On Shan"],["HEO","恆安","Heng On"],["TSH","大水坑","Tai Shui Hang"],["SHM","石門","Shek Mun"],["CIO","第一城","City One"],["STW","沙田圍","Sha Tin Wai"],["CKT","車公廟","Che Kung Temple"],["TAW","大圍","Tai Wai"],["HIK","顯徑","Hin Keng"],["DIH","鑽石山","Diamond Hill"],["KAT","啟德","Kai Tak"],["SUW","宋皇臺","Sung Wong Toi"],["TKW","土瓜灣","To Kwa Wan"],["HOM","何文田","Ho Man Tin"],["HUH","紅磡","Hung Hom"],["ETS","尖東","East Tsim Sha Tsui"],["AUS","柯士甸","Austin"],["NAC","南昌","Nam Cheong"],["MEF","美孚","Mei Foo"],["TWW","荃灣西","Tsuen Wan West"],["KSR","錦上路","Kam Sheung Road"],["YUL","元朗","Yuen Long"],["LOP","朗屏","Long Ping"],["TIS","天水圍","Tin Shui Wai"],["SIH","兆康","Siu Hong"],["TUM","屯門","Tuen Mun"]
+  ], fallback:["WKS","TUM"]},
+  { id:"TKL", zh:"將軍澳綫", en:"Tseung Kwan O Line", color:"#7D499D", stations:[
+    ["NOP","北角","North Point"],["QUB","鰂魚涌","Quarry Bay"],["YAT","油塘","Yau Tong"],["TIK","調景嶺","Tiu Keng Leng"],["TKO","將軍澳","Tseung Kwan O"],["LHP","康城","LOHAS Park"],["HAH","坑口","Hang Hau"],["POA","寶琳","Po Lam"]
+  ], fallback:["NOP","POA"]},
+  { id:"EAL", zh:"東鐵綫", en:"East Rail Line", color:"#69BE28", stations:[
+    ["ADM","金鐘","Admiralty"],["EXC","會展","Exhibition Centre"],["HUH","紅磡","Hung Hom"],["MKK","旺角東","Mong Kok East"],["KOT","九龍塘","Kowloon Tong"],["TAW","大圍","Tai Wai"],["SHT","沙田","Sha Tin"],["FOT","火炭","Fo Tan"],["RAC","馬場","Racecourse"],["UNI","大學","University"],["TAP","大埔墟","Tai Po Market"],["TWO","太和","Tai Wo"],["FAN","粉嶺","Fanling"],["SHS","上水","Sheung Shui"],["LOW","羅湖","Lo Wu"],["LMC","落馬洲","Lok Ma Chau"]
+  ], fallback:["ADM","LOW"]},
+  { id:"SIL", zh:"南港島綫", en:"South Island Line", color:"#B6BD00", stations:[
+    ["ADM","金鐘","Admiralty"],["OCP","海洋公園","Ocean Park"],["WCH","黃竹坑","Wong Chuk Hang"],["LET","利東","Lei Tung"],["SOH","海怡半島","South Horizons"]
+  ], fallback:["ADM","SOH"]},
+  { id:"TWL", zh:"荃灣綫", en:"Tsuen Wan Line", color:"#E2231A", stations:[
+    ["CEN","中環","Central"],["ADM","金鐘","Admiralty"],["TST","尖沙咀","Tsim Sha Tsui"],["JOR","佐敦","Jordan"],["YMT","油麻地","Yau Ma Tei"],["MOK","旺角","Mong Kok"],["PRE","太子","Prince Edward"],["SSP","深水埗","Sham Shui Po"],["CSW","長沙灣","Cheung Sha Wan"],["LCK","荔枝角","Lai Chi Kok"],["MEF","美孚","Mei Foo"],["LAK","荔景","Lai King"],["KWF","葵芳","Kwai Fong"],["KWH","葵興","Kwai Hing"],["TWH","大窩口","Tai Wo Hau"],["TSW","荃灣","Tsuen Wan"]
+  ], fallback:["CEN","TSW"]},
+  { id:"ISL", zh:"港島綫", en:"Island Line", color:"#007DC5", stations:[
+    ["KET","堅尼地城","Kennedy Town"],["HKU","香港大學","HKU"],["SYP","西營盤","Sai Ying Pun"],["SHW","上環","Sheung Wan"],["CEN","中環","Central"],["ADM","金鐘","Admiralty"],["WAC","灣仔","Wan Chai"],["CAB","銅鑼灣","Causeway Bay"],["TIH","天后","Tin Hau"],["FOH","炮台山","Fortress Hill"],["NOP","北角","North Point"],["QUB","鰂魚涌","Quarry Bay"],["TAK","太古","Tai Koo"],["SWH","西灣河","Sai Wan Ho"],["SKW","筲箕灣","Shau Kei Wan"],["HFC","杏花邨","Heng Fa Chuen"],["CHW","柴灣","Chai Wan"]
+  ], fallback:["KET","CHW"]},
+  { id:"KTL", zh:"觀塘綫", en:"Kwun Tong Line", color:"#00AB4E", stations:[
+    ["WHA","黃埔","Whampoa"],["HOM","何文田","Ho Man Tin"],["YMT","油麻地","Yau Ma Tei"],["MOK","旺角","Mong Kok"],["PRE","太子","Prince Edward"],["SKM","石硤尾","Shek Kip Mei"],["KOT","九龍塘","Kowloon Tong"],["LOF","樂富","Lok Fu"],["WTS","黃大仙","Wong Tai Sin"],["DIH","鑽石山","Diamond Hill"],["CHH","彩虹","Choi Hung"],["KOB","九龍灣","Kowloon Bay"],["NTK","牛頭角","Ngau Tau Kok"],["KWT","觀塘","Kwun Tong"],["LAT","藍田","Lam Tin"],["YAT","油塘","Yau Tong"],["TIK","調景嶺","Tiu Keng Leng"]
+  ], fallback:["WHA","TIK"]},
+  { id:"DRL", zh:"迪士尼綫", en:"Disneyland Resort Line", color:"#F550A6", stations:[
+    ["SUN","欣澳","Sunny Bay"],["DIS","迪士尼","Disneyland Resort"]
+  ], fallback:["SUN","DIS"]}
+];
+</script>
+
+<script>
+const API = "https://rt.data.gov.hk/v1/transport/mtr/getSchedule.php";
+const $ = (id) => document.getElementById(id);
+
+const I18N = {
+  tc: {
+    lowData:"低數據模式", line:"路綫", station:"車站", now:"本次", used:"已用", data:"數據",
+    updateEvery:"資料每 15 秒更新一次", lastUpdate:"最後更新",
+    to:"往", platform:"月台", train:"第", trainSuffix:"班",
+    door:"車門關閉", arrive:"即將到站", about:"約", minute:"分鐘", minUnit:"分",
+    noData:"暫時沒有列車資料", loading:"讀取中…",
+    apiFail:"未能連接即時 API。請確認網絡，或稍後再試。",
+    addHome:"iPhone Safari：按分享按鈕 → 加入主畫面。之後可像 App 一樣打開。",
+    reset:"已重設數據記錄。"
+  },
+  en: {
+    lowData:"Low Data Mode", line:"Line", station:"Station", now:"Now", used:"Used", data:"Data",
+    updateEvery:"Updates every 15 seconds", lastUpdate:"Last",
+    to:"To", platform:"Plat.", train:"Train", trainSuffix:"",
+    door:"Doors closing", arrive:"Arriving now", about:"About", minute:"min", minUnit:"m",
+    noData:"No train data right now", loading:"Loading…",
+    apiFail:"Unable to connect to live API. Check network or try again later.",
+    addHome:"iPhone Safari: tap Share → Add to Home Screen. Then open it like an app.",
+    reset:"Usage record has been reset."
+  }
+};
+
+let state = {
+  lang: localStorage.getItem("mtr_eta_lang") || "tc",
+  line: localStorage.getItem("mtr_eta_line") || "KTL",
+  station: localStorage.getItem("mtr_eta_station") || "YMT",
+  direction: localStorage.getItem("mtr_eta_direction") || "DOWN",
+  sessionRequests: 0,
+  sessionBytes: 0,
+  schedule: null,
+  timer: null
+};
+
+function t(k) { return I18N[state.lang][k] || k; }
+function lineObj() { return STATION_DATA.find(l => l.id === state.line) || STATION_DATA[0]; }
+function stationList() { return lineObj().stations; }
+function stationName(code) {
+  for (const line of STATION_DATA) {
+    const st = line.stations.find(s => s[0] === code);
+    if (st) return state.lang === "tc" ? st[1] : st[2];
+  }
+  return code || "--";
+}
+function lineName(line) { return state.lang === "tc" ? line.zh : line.en; }
+function formatBytes(n) {
+  n = Number(n || 0);
+  if (n < 1024) return n + " B";
+  if (n < 1024*1024) return (n/1024).toFixed(1) + " KB";
+  return (n/1024/1024).toFixed(2) + " MB";
+}
+function timeOnly(v) {
+  if (!v) return "--:--:--";
+  return String(v).length >= 19 ? String(v).slice(-8) : String(v);
+}
+function saveState() {
+  localStorage.setItem("mtr_eta_lang", state.lang);
+  localStorage.setItem("mtr_eta_line", state.line);
+  localStorage.setItem("mtr_eta_station", state.station);
+  localStorage.setItem("mtr_eta_direction", state.direction);
+}
+function totalRequests() { return Number(localStorage.getItem("mtr_eta_total_requests") || 0); }
+function totalBytes() { return Number(localStorage.getItem("mtr_eta_total_bytes") || 0); }
+function setTotalRequests(n) { localStorage.setItem("mtr_eta_total_requests", String(n)); }
+function setTotalBytes(n) { localStorage.setItem("mtr_eta_total_bytes", String(n)); }
+
+function renderI18N() {
+  document.documentElement.lang = state.lang === "tc" ? "zh-Hant" : "en";
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  $("langBtn").innerHTML = state.lang === "tc" ? "EN" : "中";
+  $("installHelp").textContent = state.lang === "tc" ? "加入主畫面教學" : "Add to Home Screen";
+  $("resetUsage").textContent = state.lang === "tc" ? "重設數據記錄" : "Reset usage";
+}
+
+function renderSelectors() {
+  const lineSelect = $("lineSelect");
+  lineSelect.innerHTML = "";
+  for (const line of STATION_DATA) {
+    const opt = document.createElement("option");
+    opt.value = line.id;
+    opt.textContent = lineName(line);
+    if (line.id === state.line) opt.selected = true;
+    lineSelect.appendChild(opt);
+  }
+
+  if (!stationList().some(s => s[0] === state.station)) {
+    state.station = stationList()[0][0];
+  }
+
+  const stationSelect = $("stationSelect");
+  stationSelect.innerHTML = "";
+  for (const st of stationList()) {
+    const opt = document.createElement("option");
+    opt.value = st[0];
+    opt.textContent = state.lang === "tc" ? st[1] : st[2];
+    if (st[0] === state.station) opt.selected = true;
+    stationSelect.appendChild(opt);
+  }
+}
+
+function currentStationSchedule() {
+  if (!state.schedule || !state.schedule.data) return null;
+  return state.schedule.data[state.line + "-" + state.station] || null;
+}
+
+function directionOptions() {
+  const st = currentStationSchedule();
+  const opts = [];
+  if (st?.UP?.length) {
+    const first = st.UP.find(x => (x.valid || "Y") === "Y") || st.UP[0];
+    opts.push({ id:"UP", dest:first.dest, title:t("to") + " " + stationName(first.dest) });
+  }
+  if (st?.DOWN?.length) {
+    const first = st.DOWN.find(x => (x.valid || "Y") === "Y") || st.DOWN[0];
+    opts.push({ id:"DOWN", dest:first.dest, title:t("to") + " " + stationName(first.dest) });
+  }
+  if (!opts.length) {
+    for (const [i, code] of lineObj().fallback.entries()) {
+      opts.push({ id:i === 0 ? "UP" : "DOWN", dest:code, title:t("to") + " " + stationName(code) });
+    }
+  }
+  return opts.slice(0,2);
+}
+
+function renderDestinations() {
+  const box = $("destinationButtons");
+  const opts = directionOptions();
+  if (!opts.some(o => o.id === state.direction)) {
+    state.direction = opts[0]?.id || "DOWN";
+  }
+  box.innerHTML = "";
+  for (const opt of opts) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "dest-btn" + (opt.id === state.direction ? " active" : "");
+    btn.textContent = opt.title;
+    btn.addEventListener("click", () => {
+      state.direction = opt.id;
+      saveState();
+      renderDestinations();
+      renderETA();
+    });
+    box.appendChild(btn);
+  }
+}
+
+function renderUsage() {
+  $("sessionRequests").textContent = state.sessionRequests;
+  $("totalRequests").textContent = totalRequests();
+  $("totalData").textContent = formatBytes(totalBytes());
+}
+
+function showNotice(msg, show=true) {
+  const n = $("notice");
+  n.textContent = msg || "";
+  n.classList.toggle("show", Boolean(show && msg));
+}
+
+function etaBadge(ttnt) {
+  if (ttnt === 0) return { cls:"door", text:t("door"), icon:"" };
+  if (ttnt === 1) return { cls:"arrive", text:t("arrive"), icon:"" };
+  return { cls:"normal", text:t("about") + " " + ttnt + " " + t("minute"), icon:"" };
+}
+
+function trainSeqText(train) {
+  const seq = train.seq || "-";
+  const time = timeOnly(train.time);
+  if (state.lang === "tc") return `${t("train")} ${seq} ${t("trainSuffix")}・${time}`;
+  return `${t("train")} ${seq}・${time}`;
+}
+
+function renderETA() {
+  const list = $("etaList");
+  list.innerHTML = "";
+  const st = currentStationSchedule();
+  const trains = st ? (st[state.direction] || []) : [];
+  const valid = trains
+    .filter(x => (x.valid || "Y").toUpperCase() === "Y")
+    .sort((a,b) => Number(a.ttnt || 999) - Number(b.ttnt || 999))
+    .slice(0,4);
+
+  if (!valid.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = state.schedule ? t("noData") : t("loading");
+    list.appendChild(empty);
+    return;
+  }
+
+  for (const train of valid) {
+    const ttnt = Math.max(0, Math.min(99, Number(train.ttnt ?? 999)));
+    const b = etaBadge(ttnt);
+    const card = document.createElement("article");
+    card.className = "eta-card";
+    card.innerHTML = `
+      <div class="minbox">
+        <span class="minute ${ttnt === 0 ? "danger" : ttnt === 1 ? "warn" : ""}">${ttnt}</span>
+        <span class="unit">${t("minUnit")}</span>
+      </div>
+      <div class="vline"></div>
+      <div class="maininfo">
+        <div class="to">${t("to")} ${stationName(train.dest)}</div>
+        <div class="seq">${trainSeqText(train)}</div>
+        <div class="badge ${b.cls}"><span>${b.text}</span></div>
+      </div>
+      <div class="platform">
+        <div class="label">${t("platform")}</div>
+        <div class="num">${train.plat || "-"}</div>
+      </div>
+    `;
+    list.appendChild(card);
+  }
+}
+
+async function fetchETA() {
+  saveState();
+  showNotice("", false);
+  const params = new URLSearchParams({ line: state.line, sta: state.station, lang: state.lang === "tc" ? "TC" : "EN" });
+  const url = `${API}?${params.toString()}`;
+
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    const text = await res.text();
+    const bytes = new Blob([text]).size;
+    state.sessionRequests += 1;
+    state.sessionBytes += bytes;
+    setTotalRequests(totalRequests() + 1);
+    setTotalBytes(totalBytes() + bytes);
+    renderUsage();
+
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    state.schedule = JSON.parse(text);
+
+    $("lastUpdate").textContent = timeOnly(state.schedule.curr_time || state.schedule.sys_time || new Date().toLocaleTimeString("en-GB"));
+    renderDestinations();
+    renderETA();
+  } catch (err) {
+    console.warn(err);
+    showNotice(t("apiFail"), true);
+    if (!state.schedule) {
+      renderETA();
+    }
+  }
+}
+
+function init() {
+  renderI18N();
+  renderSelectors();
+  renderDestinations();
+  renderUsage();
+  renderETA();
+
+  $("lineSelect").addEventListener("change", e => {
+    state.line = e.target.value;
+    state.station = STATION_DATA.find(l => l.id === state.line).stations[0][0];
+    state.direction = "DOWN";
+    state.schedule = null;
+    saveState();
+    renderSelectors();
+    renderDestinations();
+    renderETA();
+    fetchETA();
+  });
+
+  $("stationSelect").addEventListener("change", e => {
+    state.station = e.target.value;
+    state.direction = "DOWN";
+    state.schedule = null;
+    saveState();
+    renderDestinations();
+    renderETA();
+    fetchETA();
+  });
+
+  $("langBtn").addEventListener("click", () => {
+    state.lang = state.lang === "tc" ? "en" : "tc";
+    saveState();
+    renderI18N();
+    renderSelectors();
+    renderDestinations();
+    renderETA();
+    fetchETA();
+  });
+
+  $("refreshBtn").addEventListener("click", fetchETA);
+  $("installHelp").addEventListener("click", () => alert(t("addHome")));
+  $("resetUsage").addEventListener("click", () => {
+    setTotalRequests(0);
+    setTotalBytes(0);
+    state.sessionRequests = 0;
+    state.sessionBytes = 0;
+    renderUsage();
+    alert(t("reset"));
+  });
+
+  fetchETA();
+
+  state.timer = setInterval(() => {
+    if (document.visibilityState === "visible") fetchETA();
+  }, 15000);
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") fetchETA();
+  });
+}
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./service-worker.js").catch(console.warn);
+  });
+}
+
+init();
+</script>
+</body>
+</html>
