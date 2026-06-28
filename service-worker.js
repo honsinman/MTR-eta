@@ -1,4 +1,4 @@
-const CACHE_NAME = "mtr-eta-pwa-line-colors-v11-nocachefix";
+const CACHE_NAME = "mtr-eta";
 
 const APP_SHELL = [
   "./",
