@@ -3,13 +3,13 @@ const APP_SHELL = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./icons/apple-touch-icon.png",
-  "./icons/hk-mtr-logo-exact.png",
-  "./icons/icon-180.png",
-  "./icons/icon-192.png",
-  "./icons/icon-256.png",
-  "./icons/icon-384.png",
-  "./icons/icon-512.png"
+  "./apple-touch-icon.png",
+  "./hk-mtr-logo-exact.png",
+  "./icon-180.png",
+  "./icon-192.png",
+  "./icon-256.png",
+  "./icon-384.png",
+  "./icon-512.png"
 ];
 
 self.addEventListener("install", event => {
